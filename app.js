@@ -1,27 +1,31 @@
 const { App } = require('@slack/bolt');
-const store = require('./store');
+const axiosBase = require('axios');
 
 const app = new App({
   signingSecret: process.env.SLACK_SIGNING_SECRET,
   token: process.env.SLACK_BOT_TOKEN
 });
 
+const axios = axiosBase.create({
+  baseURL: `https://${process.env.JIRA_DOMAIN}/rest/api/3`,
+  headers: {
+    "Authorization": `Basic ${process.env.JIRA_TOKEN}`,
+    "Accept": "application/json"
+  }
+});
 
 app.event('app_home_opened', async ({ event, say }) => {
-  // Look up the user from DB
-  let user = store.getUser(event.user);
+  const user = {
+    user: event.user,
+    channel: event.channel
+  };
 
-  if (!user) {
-    user = {
-      user: event.user,
-      channel: event.channel
-    };
-    store.addUser(user);
+  const result = axios.get('/search')
+    .catch((e) => {
+      console.log(e);
+    });
 
-    await say(`Hello world, and welcome <@${user}>!`);
-  } else {
-    await say('Hi again!');
-  }
+  await say(`Hello world, and welcome <@${user.user}>!`);
 });
 
 
